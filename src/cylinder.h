@@ -17,6 +17,14 @@ public:
         MAX_BUFFERS
     };
 
+    class RenderState : public ::RenderState
+    {
+        float       m_Radius;
+        Vector      m_ColorFrom,
+                    m_ColorTo;
+        float       m_Length;
+    } *m_RenderStateProxy;
+
 private:
     int m_Buffers[ MAX_BUFFERS ];
 
@@ -30,18 +38,15 @@ private:
     ColorArray  m_ColorBuffer;  // color buffer overlays Vertex Array
     IndexArray  m_IndexArray;   // standard array to map vertices to tris
 
-    float       m_Radius;
-    Vector      m_ColorFrom,
-                m_ColorTo;
 public:
-    Cylinder(  float length = 1.0f );
+    Cylinder( float length = 1.0f, float radius = 1.0, const Vector& col0 = Vector({ 1.0f, 1.0f, 0.0f, 1.0f }), const Vector& col1 = Vector({ 0.0f, 1.0f, 1.0f, 1.0f }) );
 
     virtual ~Cylinder();
 
     void SetColors( const Vector& colorFrom, const Vector& colorTo );
 
-private:
-    void MakeCylinder( float meridians, float parallels );
+protected:
+    void MakeCylinder( float meridians, float parallels, RenderState* renderState );
 
 protected:
     virtual bool DoInitialize( Renderer* renderer ) throw(std::exception);

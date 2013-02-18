@@ -13,13 +13,18 @@ const int _rows    = 2;
 #define M_PI 3.14159265358979323846
 #endif
 
-Cylinder::Cylinder( )
+Cylinder::Cylinder( float length /* = 1.0f */, float radius /* = 1.0 */, const Vector& col0 /* = { 1.0f, 1.0f, 0.0f, 1.0f } */, const Vector& col1 /*= { 0.0f, 1.0f, 1.0f, 1.0f } */ )
     : m_Buffers( { -1 } )
     , m_Stride(1) // needed if/when we pack color + vertex into one array
     , m_VertexBuffer( _columns*_rows*m_Stride )    // use the same memory pool for vertex and texture coords
     , m_ColorBuffer( _columns*_rows*m_Stride )
-    , m_Radius(1.0f)
+    , m_RenderStateProxy( new RenderState() )
 {
+    m_RenderStateProxy->m_Radius    = radius;
+    m_RenderStateProxy->m_ColorFrom = col0,
+    m_RenderStateProxy->m_ColorTo   = col1;
+    m_RenderStateProxy->m_Length    = length;
+    m_RenderState = RenderStatePtr( m_RenderStateProxy );
 }
 
 Cylinder::~Cylinder()
@@ -30,11 +35,11 @@ Cylinder::~Cylinder()
 
 void Cylinder::SetColors( const Vector& colorFrom, const Vector& colorTo )
 {
-    m_ColorFrom = colorFrom;
-    m_ColorTo   = colorTo;
+    m_RenderStateProxy->m_ColorFrom = colorFrom;
+    m_RenderStateProxy->m_ColorTo   = colorTo;
 }
 
-void Cylinder::MakeCylinder( float columns, float rows )
+void Cylinder::MakeCylinder( float columns, float rows, RenderState* renderState )
 {
     const float RAD360 = M_PI*2; // 2*PI in RAD
 
@@ -66,9 +71,9 @@ void Cylinder::MakeCylinder( float columns, float rows )
             // vertex
             auto& vertex = *vit; ++vit;
             // Cylinder
-            vertex[ Vector::X ] = std::cos(phi) * m_Radius; //std::cos(theta) * std::sin(phi);
+            vertex[ Vector::X ] = std::cos(phi) * renderState->m_Radius; //std::cos(theta) * std::sin(phi);
             vertex[ Vector::Y ] = vpy; // std::sin(theta) * std::cos(phi);
-            vertex[ Vector::Z ] = std::sin(phi) * m_Radius; // std::cos(phi);
+            vertex[ Vector::Z ] = std::sin(phi) * renderState->m_Radius; // std::cos(phi);
 
             // Add normal vectors - at vertex direction from center (at y pos)
             auto& normal = *nit; ++nit;
@@ -76,6 +81,7 @@ void Cylinder::MakeCylinder( float columns, float rows )
 
             // vertex color
             auto& color = *cit; ++cit;
+            color = CLAMP_BOTTOM(CLAMP_TOP(renderState->m_ColorFrom * (1.0f - y/rows) + renderState->m_ColorTo * (y/rows) + { 0.0, 0.0, 0.0, 1.0 } ));
             color = { 1.0f - y/rows, 1.0f, y/rows, 1.0f };
 
             // skip last column/row - already indexed
@@ -133,7 +139,7 @@ bool Cylinder::DoInitialize( Renderer* renderer ) throw(std::exception)
     ASSERT( hasVBO, "VBOs not supported!" );
 
     // we might just want to create this in DoInitialize - and throw away the data we don't need locally
-    MakeCylinder( _columns, _rows );
+    MakeCylinder( _columns, _rows, m_RenderStateProxy );
 
     glGenBuffers( MAX_BUFFERS, (GLuint*)m_Buffers);
 

@@ -135,6 +135,11 @@ public:
         return *this;
     }
 
+    Vector operator+( const float v[4] ) const
+    {
+        return Vector(v).Add(*this);
+    }
+
     Vector operator+( const Vector& v ) const
     {
         return Vector(*this).Add(v);
@@ -144,6 +149,12 @@ public:
     {
         *this -= v;
         return *this;
+    }
+
+    Vector operator-( const float v[4] ) const
+    {
+        // avoid copying vector twice
+        return Vector(v).Mul(-1).Add(*this);
     }
 
     Vector operator-( const Vector& v ) const
@@ -233,7 +244,35 @@ public:
     {
         return Vector( *this ).Normalize();
     }
+
+    Vector& ClampTop()
+    {
+        if ( vec[ Vector::R ] > 1.0f) vec[ Vector::R ] = 1.0f;
+        if ( vec[ Vector::G ] > 1.0f) vec[ Vector::G ] = 1.0f;
+        if ( vec[ Vector::B ] > 1.0f) vec[ Vector::B ] = 1.0f;
+        if ( vec[ Vector::A ] > 1.0f) vec[ Vector::A ] = 1.0f;
+        return *this;
+    }
+
+    Vector& ClampBottom()
+    {
+        if ( vec[ Vector::R ] < 0.0f) vec[ Vector::R ] = 0.0f;
+        if ( vec[ Vector::G ] < 0.0f) vec[ Vector::G ] = 0.0f;
+        if ( vec[ Vector::B ] < 0.0f) vec[ Vector::B ] = 0.0f;
+        if ( vec[ Vector::A ] < 0.0f) vec[ Vector::A ] = 0.0f;
+        return *this;
+    }
 };
+
+inline Vector& CLAMP_TOP( Vector& v )
+{
+    return v.ClampTop();
+}
+
+inline Vector& CLAMP_BOTTOM( Vector& v )
+{
+    return v.ClampBottom();
+}
 
 
 #endif /* VECTOR_H_ */
