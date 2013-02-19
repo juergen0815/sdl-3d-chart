@@ -16,6 +16,16 @@
 
 class Matrix
 {
+public:
+    enum MC {
+        SCALE_X = 0,
+        SCALE_Y = 5,
+        SCALE_Z = 10,
+
+        POS_X = 12,
+        POS_Y = 13,
+        POS_Z = 13
+    };
 private:
     float m[16]; // 12/13/14 -> x/y/z
 public:
@@ -299,6 +309,11 @@ public:
         return Matrix(*this).Transpose();
     }
 
+    inline float operator[]( MC i) const
+    {
+        return m[i];
+    }
+
     inline float operator[](unsigned int i) const
     {
         ASSERT( i < 16, "Matrix index out of bounds: %d", i );
@@ -308,6 +323,11 @@ public:
     inline float& operator[](unsigned int i)
     {
         ASSERT( i < 16, "Matrix index out of bounds: %d", i );
+        return m[i];
+    }
+
+    inline float& operator[]( MC i)
+    {
         return m[i];
     }
 

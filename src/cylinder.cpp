@@ -14,16 +14,17 @@ const int _rows    = 2;
 #endif
 
 Cylinder::Cylinder( float length /* = 1.0f */, float radius /* = 1.0 */, const Vector& col0 /* = { 1.0f, 1.0f, 0.0f, 1.0f } */, const Vector& col1 /*= { 0.0f, 1.0f, 1.0f, 1.0f } */ )
-    : m_Buffers( { -1 } )
+    : m_RenderStateProxy( new RenderState() )
+    , m_Buffers( { -1 } )
     , m_Stride(1) // needed if/when we pack color + vertex into one array
     , m_VertexBuffer( _columns*_rows*m_Stride )    // use the same memory pool for vertex and texture coords
     , m_ColorBuffer( _columns*_rows*m_Stride )
-    , m_RenderStateProxy( new RenderState() )
 {
     m_RenderStateProxy->m_Radius    = radius;
+    m_RenderStateProxy->m_Length    = length;
     m_RenderStateProxy->m_ColorFrom = col0,
     m_RenderStateProxy->m_ColorTo   = col1;
-    m_RenderStateProxy->m_Length    = length;
+    // Do not free the proxy!!
     m_RenderState = RenderStatePtr( m_RenderStateProxy );
 }
 
@@ -39,7 +40,7 @@ void Cylinder::SetColors( const Vector& colorFrom, const Vector& colorTo )
     m_RenderStateProxy->m_ColorTo   = colorTo;
 }
 
-void Cylinder::MakeCylinder( float columns, float rows, RenderState* renderState )
+void Cylinder::MakeCylinder( float columns, float rows, Cylinder::RenderState* renderState )
 {
     const float RAD360 = M_PI*2; // 2*PI in RAD
 
@@ -55,7 +56,14 @@ void Cylinder::MakeCylinder( float columns, float rows, RenderState* renderState
     // generate index array; we got rows * columns * 2 tris
     m_IndexArray.resize( columns * rows * 3 * 2 + columns*3*2 ); // 3 vertices per tri, 2 tri per quad = 6 entries per iteration
 
-    const float height = 6;
+    const float height = renderState->m_Length; // this won't work...we will need to use unit sizes and scale them otherwise we can't reuse the buffers
+    Matrix& m = renderState->GetMatrix();
+    m[ Matrix::SCALE_Y ] *= height * 5;
+
+    const float radius = renderState->m_Radius / 10.0f;
+    m[ Matrix::SCALE_X ] *= radius;
+    m[ Matrix::SCALE_Z ] *= radius;
+
     auto vit = m_VertexBuffer.begin();
     auto nit = m_NormalBuffer.begin();
     auto cit = m_ColorBuffer.begin();
@@ -65,15 +73,15 @@ void Cylinder::MakeCylinder( float columns, float rows, RenderState* renderState
     float segmentSize  = RAD360/columns;
     for( float y = 0; y < rows; ++y ){  // must <= because 2 "rows" are actually 3 vertex rings
         std::vector< Vector > segments;
-        float vpy = y / lastRow * height - height/2;
+        float vpy = y / lastRow * height;
         for( float x = 0; x < columns; ++x ) { //0-2PI
             float phi = x * segmentSize;
             // vertex
             auto& vertex = *vit; ++vit;
             // Cylinder
-            vertex[ Vector::X ] = std::cos(phi) * renderState->m_Radius; //std::cos(theta) * std::sin(phi);
-            vertex[ Vector::Y ] = vpy; // std::sin(theta) * std::cos(phi);
-            vertex[ Vector::Z ] = std::sin(phi) * renderState->m_Radius; // std::cos(phi);
+            vertex[ Vector::X ] = std::cos(phi);
+            vertex[ Vector::Y ] = vpy;
+            vertex[ Vector::Z ] = std::sin(phi);
 
             // Add normal vectors - at vertex direction from center (at y pos)
             auto& normal = *nit; ++nit;
@@ -81,8 +89,7 @@ void Cylinder::MakeCylinder( float columns, float rows, RenderState* renderState
 
             // vertex color
             auto& color = *cit; ++cit;
-            color = CLAMP_BOTTOM(CLAMP_TOP(renderState->m_ColorFrom * (1.0f - y/rows) + renderState->m_ColorTo * (y/rows) + { 0.0, 0.0, 0.0, 1.0 } ));
-            color = { 1.0f - y/rows, 1.0f, y/rows, 1.0f };
+            color = CLAMP_BOTTOM(CLAMP_TOP( (renderState->m_ColorFrom * (1.0f - y/rows)).Add(renderState->m_ColorTo*(y/rows)) ));
 
             // skip last column/row - already indexed
             if ( y < lastRow ) {
@@ -104,7 +111,7 @@ void Cylinder::MakeCylinder( float columns, float rows, RenderState* renderState
 
     // we share vertices with first and last ring -> problem with normals. This point away from center, only center is correct
     auto& vb = *vit; ++vit;
-    vb = { 0,-height/2, 0 };   // bottom - center
+    vb = { 0, 0, 0 };   // bottom - center
     auto& nb = *nit; ++nit;
     nb = { 0, -1, 0 };         // point down
     auto& cb = *cit; ++cit;
@@ -119,7 +126,7 @@ void Cylinder::MakeCylinder( float columns, float rows, RenderState* renderState
         idx = bottomIdx;            m_IndexArray[ looper++ ] = idx;  // 1x1 - bottom row
     }
     auto& vt = *vit; ++vit;
-    vt = { 0, height/2, 0 };   // top - center
+    vt = { 0, height, 0 };   // top - center
     auto& nt = *nit; ++nit;
     nt = { 0, +1, 0 };       // point up
     auto& ct = *cit; ++cit;
@@ -129,7 +136,7 @@ void Cylinder::MakeCylinder( float columns, float rows, RenderState* renderState
         int
         idx = (x + 1) % lastColumn + columns*lastRow; m_IndexArray[ looper++ ] = idx;  // 1x0
         idx = (x + 0) % lastColumn + columns*lastRow; m_IndexArray[ looper++ ] = idx;  // 0x0 - readability!
-        idx = topIdx;               m_IndexArray[ looper++ ] = idx;  // 1x1 - bottom row
+        idx = topIdx;                                 m_IndexArray[ looper++ ] = idx;  // 1x1 - bottom row
     }
 }
 

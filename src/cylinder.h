@@ -20,9 +20,12 @@ public:
     class RenderState : public ::RenderState
     {
         float       m_Radius;
+        float       m_Length;
         Vector      m_ColorFrom,
                     m_ColorTo;
-        float       m_Length;
+
+        friend class Cylinder;
+
     } *m_RenderStateProxy;
 
 private:
@@ -39,14 +42,14 @@ private:
     IndexArray  m_IndexArray;   // standard array to map vertices to tris
 
 public:
-    Cylinder( float length = 1.0f, float radius = 1.0, const Vector& col0 = Vector({ 1.0f, 1.0f, 0.0f, 1.0f }), const Vector& col1 = Vector({ 0.0f, 1.0f, 1.0f, 1.0f }) );
+    Cylinder( float length = 1.0f, float radius = 0.5f, const Vector& col0 = Vector({ 1.0f, 1.0f, 0.0f, 1.0f }), const Vector& col1 = Vector({ 0.0f, 1.0f, 1.0f, 1.0f }) );
 
     virtual ~Cylinder();
 
     void SetColors( const Vector& colorFrom, const Vector& colorTo );
 
 protected:
-    void MakeCylinder( float meridians, float parallels, RenderState* renderState );
+    void MakeCylinder( float meridians, float parallels, Cylinder::RenderState* renderState );
 
 protected:
     virtual bool DoInitialize( Renderer* renderer ) throw(std::exception);

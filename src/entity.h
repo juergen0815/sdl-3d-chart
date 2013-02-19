@@ -42,10 +42,10 @@ private:
     uint32_t m_Flags;
     int      m_OrderNum;
 
-    RenderStatePtr m_RenderState;
 protected:
-    EntityList  m_RenderList;
-    EntityList  m_InitList;
+    RenderStatePtr  m_RenderState;
+    EntityList      m_RenderList;
+    EntityList      m_InitList;
 public:
     Entity() throw ();
 
