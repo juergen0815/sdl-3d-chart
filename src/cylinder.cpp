@@ -177,10 +177,6 @@ bool Cylinder::DoInitialize( Renderer* renderer ) throw(std::exception)
     return true;
 }
 
-void Cylinder::DoUpdate( float ticks ) throw(std::exception)
-{
-}
-
 void Cylinder::DoRender( int pass ) throw(std::exception)
 {
     int vertexArrayEnabled;
